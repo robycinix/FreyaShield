@@ -1,0 +1,19 @@
+# Build outputs
+.tools/
+core_engine/build/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.obj
+*.o
+*.a
+*.lib
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Editor/system files
+.DS_Store
+Thumbs.db

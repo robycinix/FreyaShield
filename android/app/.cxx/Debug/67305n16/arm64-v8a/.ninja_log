@@ -1,0 +1,15 @@
+# ninja log v5
+18	89	7998594145484155	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/policy_config.cpp.o	68baf491a4489138
+12	1503	7998594159567499	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/phone_number_normalizer.cpp.o	4a0fb5dec96fe990
+26	1753	7998594162067828	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/whitelist_matcher.cpp.o	7037ff46e78eaa60
+6	1769	7998594162237287	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/decision_engine.cpp.o	17c444d7b696bd62
+39	1794	7998594162500166	CMakeFiles/callguardian_jni.dir/core_bridge.cpp.o	28d582beb65fb35e
+32	1853	7998594163088731	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/spoof_detector.cpp.o	7a732392910ff353
+0	1886	7998594163356065	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/call_analyzer.cpp.o	fcc9e72dab9cd825
+1886	1959	7998594164022293	libcallguardian_core.a	f25eebe4960f9eaf
+1959	2042	7998594164960156	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/67305n16/obj/arm64-v8a/libcallguardian_jni.so	de60dfd3f2be4657
+9	2430	7998806586079273	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/call_analyzer.cpp.o	fcc9e72dab9cd825
+28	2450	7998806586339284	CMakeFiles/callguardian_jni.dir/core_bridge.cpp.o	28d582beb65fb35e
+2430	2617	7998806587799277	libcallguardian_core.a	f25eebe4960f9eaf
+2617	2984	7998806591599304	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/67305n16/obj/arm64-v8a/libcallguardian_jni.so	de60dfd3f2be4657
+7	375	7998837006224181	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/67305n16/obj/arm64-v8a/libcallguardian_jni.so	de60dfd3f2be4657

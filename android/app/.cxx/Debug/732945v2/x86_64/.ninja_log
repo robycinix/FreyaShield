@@ -1,0 +1,56 @@
+# ninja log v5
+17	64	7998837801495501	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/policy_config.cpp.o	3c471d380369e48d
+13	1005	7998837810845519	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/phone_number_normalizer.cpp.o	740a23e626d05f91
+6	1259	7998837813415526	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/decision_engine.cpp.o	25b687895700252c
+23	1272	7998837813525486	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/whitelist_matcher.cpp.o	a130680afe458757
+29	1333	7998837814155520	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/spoof_detector.cpp.o	19315519fcae85dd
+0	1337	7998837814175492	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/call_analyzer.cpp.o	ad501f98581827ef
+35	1408	7998837814855505	CMakeFiles/callguardian_jni.dir/core_bridge.cpp.o	a4aeff60d6eb4190
+1337	1409	7998837814775487	libcallguardian_core.a	86b340bec36945a0
+1409	1505	7998837815774076	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+8	175	7998856858947192	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+6	147	7998862872825115	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+7	108	7998869070274729	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+6	104	7998870468713864	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+7	177	7998878734674731	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+5	1144	7999422861109471	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/spoof_detector.cpp.o	19315519fcae85dd
+1145	1237	7999422861971782	libcallguardian_core.a	86b340bec36945a0
+1237	1388	7999422863483613	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+6	1215	7999423898780401	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/spoof_detector.cpp.o	19315519fcae85dd
+1215	1305	7999423899580449	libcallguardian_core.a	86b340bec36945a0
+1305	1418	7999423900770443	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+21	76	7999425129900344	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/policy_config.cpp.o	3c471d380369e48d
+14	1286	7999425141930374	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/decision_engine.cpp.o	25b687895700252c
+28	1373	7999425142820338	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/spoof_detector.cpp.o	19315519fcae85dd
+7	1423	7999425143320330	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/call_analyzer.cpp.o	ad501f98581827ef
+36	1502	7999425144060334	CMakeFiles/callguardian_jni.dir/core_bridge.cpp.o	a4aeff60d6eb4190
+1423	1518	7999425144160339	libcallguardian_core.a	86b340bec36945a0
+1518	1636	7999425145400328	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+13	446	7999435807848680	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+12	1592	7999439652420861	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/call_analyzer.cpp.o	ad501f98581827ef
+26	1726	7999439653750865	CMakeFiles/callguardian_jni.dir/core_bridge.cpp.o	a4aeff60d6eb4190
+1593	1740	7999439653790839	libcallguardian_core.a	86b340bec36945a0
+1740	1896	7999439655417398	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+6	340	7999444133920589	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+10	349	7999446741857582	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+1	16	0	clean	eb14175b5eccf775
+30	159	7999447502807122	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/policy_config.cpp.o	3c471d380369e48d
+21	1564	7999447517137131	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/phone_number_normalizer.cpp.o	740a23e626d05f91
+59	1981	7999447521337154	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/whitelist_matcher.cpp.o	a130680afe458757
+12	2029	7999447521827081	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/call_analyzer.cpp.o	ad501f98581827ef
+50	2037	7999447521897132	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/spoof_detector.cpp.o	19315519fcae85dd
+39	2039	7999447521937095	CMakeFiles/callguardian_core.dir/C_/Users/rober/Documents/New_project/core_engine/src/decision_engine.cpp.o	25b687895700252c
+2039	2142	7999447522807094	libcallguardian_core.a	86b340bec36945a0
+70	2209	7999447523607110	CMakeFiles/callguardian_jni.dir/core_bridge.cpp.o	a4aeff60d6eb4190
+2209	2355	7999447525007093	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+8	217	7999668835881640	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+7	296	7999670806095405	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+12	466	7999671138195044	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+9	272	7999677475956370	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+10	218	7999680009815749	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+8	172	7999691195977271	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+6	255	7999695886848889	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+7	173	7999699706813450	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+7	291	7999706598737580	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+7	121	7999707958056248	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
+7	123	7999711690931909	C:/Users/rober/Documents/New project/android/app/build/intermediates/cxx/Debug/732945v2/obj/x86_64/libcallguardian_jni.so	89e7b56c59d32253
