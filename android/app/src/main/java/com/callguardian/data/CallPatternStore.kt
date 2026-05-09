@@ -1,7 +1,6 @@
 package com.callguardian.data
 
 import android.content.Context
-import android.provider.Settings
 import com.callguardian.engine.PlatformRiskAssessment
 import org.json.JSONArray
 import org.json.JSONObject
@@ -175,8 +174,7 @@ object CallPatternStore {
         prefs.getString(KEY_SALT, null)?.let { return it }
         val bytes = ByteArray(16)
         SecureRandom().nextBytes(bytes)
-        val generated = bytes.joinToString("") { "%02x".format(it) } +
-            Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID).orEmpty()
+        val generated = bytes.joinToString("") { "%02x".format(it) }
         prefs.edit().putString(KEY_SALT, generated).apply()
         return generated
     }

@@ -1,9 +1,14 @@
 package com.callguardian
 
+import android.Manifest
 import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -36,7 +41,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Block
@@ -59,6 +63,9 @@ import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -66,8 +73,6 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -139,6 +144,12 @@ private data class ProtectionPreset(
     val policy: PolicySettings
 )
 
+private data class ConsentLevelOption(
+    val level: Int,
+    val title: String,
+    val description: String
+)
+
 private data class CountryBlockOption(
     val flag: String,
     val label: String,
@@ -203,8 +214,8 @@ private val englishText = mapOf(
     "Config." to "Config",
     "Log" to "Log",
     "Configurazioni" to "Settings",
-    "Analisi core" to "Core analysis",
-    "Numero test" to "Test number",
+    "Verifica motore" to "Engine check",
+    "Numero verificato" to "Checked number",
     "Stato" to "Status",
     "Inizializzazione" to "Initializing",
     "Score" to "Score",
@@ -234,15 +245,17 @@ private val englishText = mapOf(
     "Solo numeri mascherati, senza dati completi in chiaro." to "Masked numbers only, with no full plain-text data.",
     "Aggiorna" to "Refresh",
     "Nessuna chiamata bloccata o silenziata." to "No blocked or silenced calls.",
-    "Protezzione Attiva" to "Protection Active",
+    "Protezione attiva" to "Protection active",
     "Protezione da attivare" to "Protection inactive",
     "Freya controlla!" to "Freya is watching!",
     "Abilita FreyaShield come app di filtro chiamate per proteggere le chiamate in arrivo." to "Enable FreyaShield as the call screening app to protect incoming calls.",
+    "Freya controlla, ma la batteria può limitarla." to "Freya is checking calls, but battery settings may limit it.",
+    "Consenti batteria senza limiti" to "Allow unrestricted battery",
     "Attiva filtro chiamate" to "Enable call filter",
     "Strumenti regole" to "Rule tools",
-    "Consulta blocchi salvati o prova scenari senza chiamate reali." to "Review saved blocks or test scenarios without real calls.",
+    "Consulta blocchi salvati o apri il simulatore senza chiamate reali." to "Review saved blocks or open the simulator without real calls.",
     "Elenco" to "List",
-    "Prove" to "Tests",
+    "Simulatore" to "Simulator",
     "Pattern fidati" to "Trusted patterns",
     "Numero o prefisso" to "Number or prefix",
     "Aggiungi" to "Add",
@@ -259,7 +272,17 @@ private val englishText = mapOf(
     "Nessun blocco salvato." to "No saved blocks.",
     "Rimuovi blocco" to "Remove block",
     "Nazione" to "Country",
-    "Modalita protezione" to "Protection mode",
+    "Modalità protezione" to "Protection mode",
+    "Livello consenso" to "Consent level",
+    "Solo registro" to "Log only",
+    "Avviso manuale" to "Manual warning",
+    "Può silenziare" to "May silence",
+    "Può bloccare" to "May block",
+    "Il motore non supera il livello di consenso scelto." to "The engine cannot exceed the chosen consent level.",
+    "Registra e spiega, senza intervenire sulla chiamata." to "Log and explain without intervening on the call.",
+    "Consenso prudente: l'app segnala il rischio ma lascia passare la chiamata." to "Cautious consent: the app flags risk but lets the call through.",
+    "Consenso medio: può silenziare, ma non bloccare o rifiutare." to "Medium consent: it may silence, but cannot block or reject.",
+    "Consenso alto: può bloccare solo quando le regole e le soglie lo richiedono." to "High consent: it may block only when rules and thresholds require it.",
     "Configurazione personalizzata." to "Custom configuration.",
     "Avviso" to "Warn",
     "Silenzia" to "Silence",
@@ -276,21 +299,21 @@ private val englishText = mapOf(
     "Cancella dati locali" to "Clear local data",
     "Spiegazione dettagliata della funzione selezionata." to "Detailed explanation of the selected feature.",
     "Indietro" to "Back",
-    "Prove regole" to "Rule tests",
+    "Simulatore regole" to "Rule simulator",
     "Simulatore locale per verificare soglie, whitelist e blocchi." to "Local simulator to check thresholds, whitelist, and blocks.",
     "Simulatore chiamata" to "Call simulator",
-    "Numero da testare" to "Number to test",
-    "Gia visto" to "Seen before",
+    "Numero da verificare" to "Number to check",
+    "Già visto" to "Seen before",
     "Verifica fallita" to "Failed verification",
     "Frequenza alta" to "High frequency",
     "Analizza" to "Analyze",
     "Fidati di questo numero" to "Trust this number",
     "Blocca numeri simili" to "Block similar numbers",
     "Scenari rapidi" to "Quick scenarios",
-    "Test locali senza chiamate reali e senza salvare numeri." to "Local tests without real calls and without saving numbers.",
-    "Esegui test" to "Run test",
+    "Simulazioni locali senza chiamate reali e senza salvare numeri." to "Local simulations without real calls and without saving numbers.",
+    "Esegui verifica" to "Run check",
     "Meno interventi" to "Fewer interventions",
-    "Piu protezione" to "More protection",
+    "Più protezione" to "More protection",
     "Spiega questa funzione" to "Explain this feature",
     "Bassa" to "Low",
     "Standard" to "Standard",
@@ -298,7 +321,99 @@ private val englishText = mapOf(
     "Call center" to "Call center",
     "Avvisa spesso, blocca solo segnali molto forti." to "Warn often, block only very strong signals.",
     "Equilibrio tra protezione, silenziamento e falsi positivi." to "Balance protection, silencing, and false positives.",
-    "Piu severa su verifica fallita, spoofing vicino e numeri esteri nuovi." to "Stricter on failed verification, nearby spoofing, and new foreign numbers.",
+    "Più severa su verifica fallita, spoofing vicino e numeri esteri nuovi." to "Stricter on failed verification, nearby spoofing, and new foreign numbers.",
+    "Chiamata normale" to "Normal call",
+    "Numero italiano già visto e senza segnali sospetti." to "Known Italian number with no suspicious signals.",
+    "Simula una chiamata con verifica operatore fallita." to "Simulates a call with failed carrier verification.",
+    "Numero simile al prefisso del dispositivo, non verificato." to "Unverified number similar to the device prefix.",
+    "Alta frequenza" to "High frequency",
+    "Stesso numero con troppe chiamate in una finestra breve." to "Same number with too many calls in a short time window.",
+    "Usa il prefisso fidato predefinito +39347*." to "Uses the default trusted prefix +39347*.",
+    "Pattern artificiale" to "Artificial pattern",
+    "Numero con lunga sequenza ripetuta." to "Number with a long repeated sequence.",
+    "Spam estero mai visto" to "New foreign spam",
+    "Numero internazionale nuovo: viene bloccato salvo whitelist." to "New international number: blocked unless whitelisted.",
+    "Cosa fa" to "What it does",
+    "Cosa controlla" to "What it controls",
+    "Benefici" to "Benefits",
+    "Effetti collaterali" to "Trade-offs",
+    "Neighbor spoofing" to "Neighbor spoofing",
+    "Whitelist" to "Whitelist",
+    "I preset modificano piu impostazioni insieme. Bassa riduce i blocchi automatici, Standard mantiene un equilibrio, Alta aumenta la severita, Call center applica controlli piu rigorosi contro chiamate ripetute e non verificate." to "Presets change several settings together. Low reduces automatic blocking, Standard keeps a balance, High increases strictness, and Call center applies stronger checks against repeated and unverified calls.",
+    "Ti permette di cambiare rapidamente comportamento senza regolare ogni singolo livello. Call center e utile quando ricevi molte chiamate pubblicitarie o numeri molto simili." to "It lets you quickly change behavior without adjusting every level. Call center is useful when you receive many marketing calls or very similar numbers.",
+    "Preset piu aggressivi possono bloccare chiamate legittime, soprattutto numeri nuovi, centralini aziendali, corrieri o servizi che usano prefissi condivisi." to "More aggressive presets may block legitimate calls, especially new numbers, business switchboards, couriers, or services using shared prefixes.",
+    "Decide quanto presto FreyaShield deve considerare una chiamata sospetta. Spostando il cursore verso piu protezione, l'app avvisa prima anche con segnali piu leggeri." to "Sets how early FreyaShield should consider a call suspicious. Moving the slider toward more protection makes the app warn sooner, even with lighter signals.",
+    "Ti aiuta a notare subito numeri mai visti, pattern strani o comportamenti debolmente sospetti senza arrivare per forza al silenzio o al blocco." to "It helps you notice unknown numbers, unusual patterns, or mildly suspicious behavior without necessarily silencing or blocking the call.",
+    "Se lo rendi molto sensibile, piu chiamate legittime potranno apparire come sospette. Non vengono necessariamente bloccate, ma il registro risultera piu prudente." to "If it is very sensitive, more legitimate calls may appear suspicious. They are not necessarily blocked, but the log becomes more cautious.",
+    "Decide quanto presto FreyaShield deve togliere lo squillo a una chiamata sospetta. Verso piu protezione, silenzia con segnali meno pesanti." to "Sets how early FreyaShield should silence a suspicious call. Toward more protection, lighter signals can trigger silencing.",
+    "Riduce il fastidio dei call center senza respingere subito la chiamata. E la via di mezzo piu comoda quando vuoi meno disturbo ma non vuoi bloccare troppo." to "It reduces call center interruptions without immediately rejecting the call. It is the middle ground when you want less disturbance but do not want to block too much.",
+    "Se lo rendi molto protettivo, potresti non sentire chiamate nuove ma legittime. Metti in whitelist i numeri importanti." to "If it is very protective, you may not hear new but legitimate calls. Add important numbers to the whitelist.",
+    "Decide quanto presto FreyaShield deve respingere una chiamata. Verso piu protezione, il blocco scatta con meno tolleranza al rischio." to "Sets how early FreyaShield should reject a call. Toward more protection, blocking has less tolerance for risk.",
+    "Ferma automaticamente chiamate con segnali forti, come verifica fallita, prefissi insistenti, blocklist o combinazioni molto sospette." to "It automatically stops calls with strong signals, such as failed verification, persistent prefixes, blocklist matches, or very suspicious combinations.",
+    "Se lo rendi troppo protettivo, alcuni numeri nuovi ma legittimi potrebbero essere bloccati prima che tu li veda." to "If it is too protective, some new but legitimate numbers may be blocked before you see them.",
+    "Usa il controllo ID chiamata fornito da Android e dall'operatore. Se il sistema segnala verifica fallita, FreyaShield porta la chiamata direttamente nell'area di blocco." to "Uses caller ID verification from Android and the carrier. If the system reports failed verification, FreyaShield moves the call directly into the blocking range.",
+    "E una delle difese piu forti contro lo spoofing, cioe chiamate che mostrano un numero non realmente autorizzato dal chiamante." to "It is one of the strongest defenses against spoofing, where a call shows a number the caller is not actually authorized to use.",
+    "Non tutti gli operatori e centralini gestiscono la verifica allo stesso modo. In casi rari, centralini aziendali o servizi VoIP legittimi potrebbero risultare non affidabili." to "Not all carriers and switchboards handle verification the same way. In rare cases, legitimate business switchboards or VoIP services may appear untrusted.",
+    "Rileva numeri che condividono molte cifre iniziali con il tuo numero o prefisso, tecnica usata per sembrare locali o familiari." to "Detects numbers sharing many leading digits with your number or prefix, a technique used to look local or familiar.",
+    "Aiuta contro chiamate truffa che imitano numeri della tua zona o del tuo stesso prefisso mobile." to "Helps against scam calls that imitate numbers from your area or mobile prefix.",
+    "Aumenta molto il rischio dei numeri internazionali mai visti prima quando l'utente e configurato su Italia." to "Greatly increases risk for international numbers never seen before when the user is configured for Italy.",
+    "Riduce molte campagne spam o truffe che arrivano da prefissi esteri inattesi." to "Reduces many spam or scam campaigns coming from unexpected foreign prefixes.",
+    "Se ricevi chiamate legittime dall'estero, da clienti o da servizi internazionali, potresti dover aggiungere whitelist mirate." to "If you receive legitimate calls from abroad, clients, or international services, you may need targeted whitelist entries.",
+    "Memorizza localmente, tramite hash, quante chiamate arrivano dallo stesso numero o prefisso in finestre brevi. Se un prefisso insiste e la chiamata e gia sospetta, forza il blocco." to "Stores local hashes to count how many calls arrive from the same number or prefix in short windows. If a prefix persists and the call is already suspicious, it forces blocking.",
+    "E efficace contro call center che ruotano le ultime cifre del numero per aggirare i blocchi manuali." to "It is effective against call centers that rotate the last digits to bypass manual blocks.",
+    "Quando un prefisso genera piu eventi filtrati, viene messo in quarantena per 7 giorni. La memoria usa hash locali e non conserva numeri completi." to "When a prefix generates multiple filtered events, it is quarantined for 7 days. Memory uses local hashes and does not keep full numbers.",
+    "Blocca automaticamente raffiche temporanee senza creare una regola permanente che potresti dimenticare." to "Automatically blocks temporary bursts without creating a permanent rule you might forget.",
+    "Durante la quarantena possono essere bloccate chiamate legittime dallo stesso gruppo di numeri. La cancellazione dati locali rimuove anche questa memoria." to "During quarantine, legitimate calls from the same group of numbers may be blocked. Clearing local data also removes this memory.",
+    "Se una chiamata non ha verifica positiva e ha gia raggiunto almeno il livello Avviso, viene portata direttamente al blocco." to "If a call has no positive verification and has already reached at least Warn level, it is moved directly to blocking.",
+    "Stringe la difesa contro chiamate opache: non basta essere sconosciuti, ma sconosciuti piu un altro segnale sospetto." to "Tightens defense against opaque calls: unknown is not enough by itself, but unknown plus another suspicious signal is.",
+    "Alcuni operatori non forniscono sempre verifica positiva. Potrebbe quindi bloccare chiamate nuove ma lecite se hanno altri segnali deboli." to "Some carriers do not always provide positive verification. It may therefore block new but legitimate calls if they have other weak signals.",
+    "Dalle 20 alle 8 silenzia chiamate sospette e non verificate. Le chiamate fidate continuano a passare." to "From 8 PM to 8 AM, it silences suspicious and unverified calls. Trusted calls still pass.",
+    "Riduce il disturbo nelle ore piu fastidiose senza applicare per forza blocchi permanenti." to "Reduces disturbance during the most inconvenient hours without necessarily applying permanent blocks.",
+    "Potresti non sentire chiamate legittime urgenti da numeri nuovi. Usa whitelist per familiari, lavoro, medici, corrieri o servizi importanti." to "You may not hear urgent legitimate calls from new numbers. Use the whitelist for family, work, doctors, couriers, or important services.",
+    "Consente solo numeri o prefissi presenti nelle regole fidate. Tutto il resto viene bloccato prima delle valutazioni normali." to "Allows only numbers or prefixes in trusted rules. Everything else is blocked before normal evaluation.",
+    "E la modalita piu restrittiva quando vuoi ridurre al minimo le chiamate non previste." to "It is the most restrictive mode when you want to minimize unexpected calls.",
+    "Blocca quasi tutto cio che non hai previsto. Non e consigliata se aspetti chiamate da numeri nuovi, uffici pubblici, consegne, assistenza o appuntamenti." to "It blocks almost everything you have not planned for. It is not recommended if you expect calls from new numbers, public offices, deliveries, support, or appointments.",
+    "Mostra nel registro i pulsanti Fidati e Blocca per trasformare rapidamente un prefisso mascherato in regola." to "Shows Trust and Block buttons in the log so you can quickly turn a masked prefix into a rule.",
+    "Ti permette di correggere il filtro mentre lo usi: se sbaglia, puoi fidarti; se riconosci spam, puoi bloccare simili." to "Lets you correct the filter while using it: if it is too strict, you can trust; if you recognize spam, you can block similar numbers.",
+    "Le azioni partono dal prefisso visibile nel numero mascherato, quindi sono volutamente ampie. Controlla l'elenco blocchi se una regola diventa troppo severa." to "Actions start from the visible prefix in the masked number, so they are intentionally broad. Check the block list if a rule becomes too strict.",
+    "Crea un testo condivisibile con statistiche, ultimo stato servizio e registro mascherato. Non include numeri completi." to "Creates shareable text with statistics, latest service status, and masked log. It does not include full numbers.",
+    "Aiuta a capire cosa sta decidendo l'app o a chiedere supporto senza esporre dati sensibili." to "Helps you understand what the app is deciding or ask for support without exposing sensitive data.",
+    "Contiene comunque orari, motivi e numeri mascherati. Condividilo solo con persone o canali di cui ti fidi." to "It may still contain times, reasons, and masked numbers. Share it only with people or channels you trust.",
+    "Rimuove statistiche, registro mascherato, diagnostica servizio e memoria comportamentale usata da auto-blocco e quarantena." to "Removes statistics, masked log, service diagnostics, and behavioral memory used by auto-blocking and quarantine.",
+    "Ripulisce lo storico e azzera eventuali quarantene o conteggi che stavano influenzando le decisioni." to "Clears history and resets any quarantines or counters that were influencing decisions.",
+    "Dopo la cancellazione l'app perde memoria dei comportamenti recenti. Auto-blocco e quarantena dovranno ricostruire i conteggi dalle chiamate future." to "After clearing, the app loses memory of recent behavior. Auto-blocking and quarantine must rebuild counts from future calls.",
+    "Raccoglie gli accessi rapidi all'elenco dei blocchi e al simulatore. Non modifica da solo il filtro, ma ti porta agli strumenti per controllarlo." to "Collects shortcuts to the block list and simulator. It does not change the filter by itself, but opens the tools to control it.",
+    "Ti permette di verificare subito quali blocchi sono attivi e provare scenari senza aspettare una chiamata reale." to "Lets you immediately check which blocks are active and simulate scenarios without waiting for a real call.",
+    "Le prove possono creare regole se premi Fidati o Blocca. Controlla sempre il pattern creato, soprattutto quando contiene l'asterisco." to "Simulations can create rules if you press Trust or Block. Always check the created pattern, especially when it contains an asterisk.",
+    "Aggiunge numeri o prefissi alla whitelist. Un pattern fidato ha priorita sulle euristiche e permette alla chiamata di passare." to "Adds numbers or prefixes to the whitelist. A trusted pattern has priority over heuristics and allows the call to pass.",
+    "Riduce falsi positivi su famiglia, lavoro, medici, corrieri, clienti o centralini che il filtro potrebbe considerare sospetti." to "Reduces false positives for family, work, doctors, couriers, clients, or switchboards the filter might consider suspicious.",
+    "Un prefisso troppo ampio, come +39*, renderebbe il filtro quasi inutile per molti numeri. Usa pattern specifici, per esempio un numero completo o un prefisso ben riconoscibile." to "A prefix that is too broad, such as +39*, would make the filter almost useless for many numbers. Use specific patterns, such as a full number or a recognizable prefix.",
+    "Crea una regola blocklist con asterisco finale. Se inserisci 081123, il filtro blocca i numeri che iniziano con quel prefisso normalizzato." to "Creates a blocklist rule with a trailing asterisk. If you enter 081123, the filter blocks numbers starting with that normalized prefix.",
+    "E molto efficace contro call center che cambiano solo le ultime cifre mantenendo lo stesso inizio." to "It is very effective against call centers that change only the last digits while keeping the same beginning.",
+    "Aggiunge alla blocklist un prefisso internazionale o un prefisso geografico italiano. Le chiamate che iniziano con quel codice vengono bloccate." to "Adds an international prefix or Italian geographic prefix to the blocklist. Calls starting with that code are blocked.",
+    "Utile se ricevi spam sistematico da paesi o aree da cui non aspetti chiamate." to "Useful if you receive recurring spam from countries or areas where you do not expect calls.",
+    "I preset modificano più impostazioni insieme. Bassa riduce i blocchi automatici, Standard mantiene un equilibrio, Alta aumenta la severità, Call center applica controlli più rigorosi contro chiamate ripetute e non verificate." to "Presets change several settings together. Low reduces automatic blocking, Standard keeps a balance, High increases strictness, and Call center applies stronger checks against repeated and unverified calls.",
+    "Ti permette di cambiare rapidamente comportamento senza regolare ogni singolo livello. Call center è utile quando ricevi molte chiamate pubblicitarie o numeri molto simili." to "It lets you quickly change behavior without adjusting every level. Call center is useful when you receive many marketing calls or very similar numbers.",
+    "Preset più aggressivi possono bloccare chiamate legittime, soprattutto numeri nuovi, centralini aziendali, corrieri o servizi che usano prefissi condivisi." to "More aggressive presets may block legitimate calls, especially new numbers, business switchboards, couriers, or services using shared prefixes.",
+    "Decide quanto presto FreyaShield deve considerare una chiamata sospetta. Spostando il cursore verso più protezione, l'app avvisa prima anche con segnali più leggeri." to "Sets how early FreyaShield should consider a call suspicious. Moving the slider toward more protection makes the app warn sooner, even with lighter signals.",
+    "Se lo rendi molto sensibile, più chiamate legittime potranno apparire come sospette. Non vengono necessariamente bloccate, ma il registro risulterà più prudente." to "If it is very sensitive, more legitimate calls may appear suspicious. They are not necessarily blocked, but the log becomes more cautious.",
+    "Decide quanto presto FreyaShield deve togliere lo squillo a una chiamata sospetta. Verso più protezione, silenzia con segnali meno pesanti." to "Sets how early FreyaShield should silence a suspicious call. Toward more protection, lighter signals can trigger silencing.",
+    "Riduce il fastidio dei call center senza respingere subito la chiamata. È la via di mezzo più comoda quando vuoi meno disturbo ma non vuoi bloccare troppo." to "It reduces call center interruptions without immediately rejecting the call. It is the middle ground when you want less disturbance but do not want to block too much.",
+    "Decide quanto presto FreyaShield deve respingere una chiamata. Verso più protezione, il blocco scatta con meno tolleranza al rischio." to "Sets how early FreyaShield should reject a call. Toward more protection, blocking has less tolerance for risk.",
+    "È una delle difese più forti contro lo spoofing, cioè chiamate che mostrano un numero non realmente autorizzato dal chiamante." to "It is one of the strongest defenses against spoofing, where a call shows a number the caller is not actually authorized to use.",
+    "In aree con molti numeri simili o centralini legittimi, può aumentare il rischio di chiamate innocue. La whitelist risolve i casi affidabili." to "In areas with many similar numbers or legitimate switchboards, it can increase the chance of flagging harmless calls. The whitelist handles trusted cases.",
+    "Aumenta molto il rischio dei numeri internazionali mai visti prima quando l'utente è configurato su Italia." to "Greatly increases risk for international numbers never seen before when the user is configured for Italy.",
+    "Memorizza localmente, tramite hash, quante chiamate arrivano dallo stesso numero o prefisso in finestre brevi. Se un prefisso insiste e la chiamata è già sospetta, forza il blocco." to "Stores local hashes to count how many calls arrive from the same number or prefix in short windows. If a prefix persists and the call is already suspicious, it forces blocking.",
+    "È efficace contro call center che ruotano le ultime cifre del numero per aggirare i blocchi manuali." to "It is effective against call centers that rotate the last digits to bypass manual blocks.",
+    "Può colpire centralini legittimi che chiamano più volte da interni simili. In quel caso aggiungi il prefisso alla whitelist o disattiva l'opzione." to "It may affect legitimate switchboards that call repeatedly from similar extensions. In that case, add the prefix to the whitelist or disable the option.",
+    "Quando un prefisso genera più eventi filtrati, viene messo in quarantena per 7 giorni. La memoria usa hash locali e non conserva numeri completi." to "When a prefix generates multiple filtered events, it is quarantined for 7 days. Memory uses local hashes and does not keep full numbers.",
+    "Se una chiamata non ha verifica positiva e ha già raggiunto almeno il livello Avviso, viene portata direttamente al blocco." to "If a call has no positive verification and has already reached at least Warn level, it is moved directly to blocking.",
+    "Stringe la difesa contro chiamate opache: non basta essere sconosciuti, ma sconosciuti più un altro segnale sospetto." to "Tightens defense against opaque calls: unknown is not enough by itself, but unknown plus another suspicious signal is.",
+    "Riduce il disturbo nelle ore più fastidiose senza applicare per forza blocchi permanenti." to "Reduces disturbance during the most inconvenient hours without necessarily applying permanent blocks.",
+    "È la modalità più restrittiva quando vuoi ridurre al minimo le chiamate non previste." to "It is the most restrictive mode when you want to minimize unexpected calls.",
+    "Blocca quasi tutto ciò che non hai previsto. Non è consigliata se aspetti chiamate da numeri nuovi, uffici pubblici, consegne, assistenza o appuntamenti." to "It blocks almost everything you have not planned for. It is not recommended if you expect calls from new numbers, public offices, deliveries, support, or appointments.",
+    "Un prefisso troppo corto può bloccare molte chiamate legittime della stessa area o dello stesso centralino. Se succede, rimuovi la regola da Blocchi attivi." to "A prefix that is too short can block many legitimate calls from the same area or switchboard. If that happens, remove the rule from Active blocks.",
+    "Bloccare un'intera nazione o area è una scelta ampia. Può fermare anche banche, assistenza, spedizioni o contatti legittimi che usano quel prefisso." to "Blocking an entire country or area is a broad choice. It can also stop banks, support, deliveries, or legitimate contacts using that prefix.",
     "Protezione avanzata contro prefissi ripetuti, numeri non verificati e chiamate serali." to "Advanced protection against repeated prefixes, unverified numbers, and evening calls.",
     "Avvisa" to "Warn",
     "Consenti" to "Allow",
@@ -315,7 +430,11 @@ private val englishText = mapOf(
     "Numeri simili ripetuti" to "Repeated similar numbers",
     "Prefisso in quarantena" to "Prefix in quarantine",
     "Sospetto non verificato" to "Unverified suspicious call",
-    "Dati chiamata vuoti" to "Empty call data"
+    "Dati chiamata vuoti" to "Empty call data",
+    "Richiede consenso" to "Consent required",
+    "Limitato dal consenso: solo registro" to "Limited by consent: log only",
+    "Limitato dal consenso: avviso" to "Limited by consent: warning",
+    "Limitato dal consenso: silenzia" to "Limited by consent: silence"
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -327,8 +446,9 @@ private fun CallGuardianApp() {
     var helpTargetScreen by remember { mutableStateOf(AppScreen.Dashboard) }
     var activeHelpPage by remember { mutableStateOf(helpPageForScreen(AppScreen.Dashboard)) }
     var roleHeld by remember { mutableStateOf(isCallScreeningRoleHeld(context)) }
+    var batteryUnrestricted by remember { mutableStateOf(isIgnoringBatteryOptimizations(context)) }
     var stats by remember { mutableStateOf(CallStatsStore.loadLastSevenDays(context)) }
-    var recentEvents by remember { mutableStateOf(CallEventStore.loadRecent(context, limit = 50)) }
+    var recentEvents by remember { mutableStateOf(CallEventStore.loadRecent(context, limit = 5)) }
     var diagnostics by remember { mutableStateOf(ScreeningDiagnosticsStore.load(context)) }
     val initialPolicy = remember { AppPreferences.loadPolicy(context) }
     var assessment by remember { mutableStateOf<PlatformRiskAssessment?>(null) }
@@ -345,6 +465,7 @@ private fun CallGuardianApp() {
     var warnThreshold by remember { mutableFloatStateOf(initialPolicy.warnThreshold) }
     var silenceThreshold by remember { mutableFloatStateOf(initialPolicy.silenceThreshold) }
     var blockThreshold by remember { mutableFloatStateOf(initialPolicy.blockThreshold) }
+    var consentLevel by remember { mutableStateOf(initialPolicy.consentLevel) }
     var blockFailedVerification by remember { mutableStateOf(initialPolicy.blockFailedVerification) }
     var warnNeighborSpoof by remember { mutableStateOf(initialPolicy.warnNeighborSpoof) }
     var blockFirstSeenInternational by remember { mutableStateOf(initialPolicy.blockFirstSeenInternational) }
@@ -354,18 +475,30 @@ private fun CallGuardianApp() {
     var quietHoursFilter by remember { mutableStateOf(initialPolicy.quietHoursFilter) }
     var trustedOnlyMode by remember { mutableStateOf(initialPolicy.trustedOnlyMode) }
     var manualFeedbackActions by remember { mutableStateOf(initialPolicy.manualFeedbackActions) }
+    val configuration = LocalConfiguration.current
+    val useNavigationRail = configuration.screenWidthDp > configuration.screenHeightDp
 
     val roleLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
         roleHeld = isCallScreeningRoleHeld(context)
     }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) {
+        // The call choice notification is opportunistic; screening still works without it.
+    }
 
     LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
         roleHeld = isCallScreeningRoleHeld(context)
         AppPreferences.applyToCore(context)
         stats = CallStatsStore.loadLastSevenDays(context)
-        recentEvents = CallEventStore.loadRecent(context, limit = 50)
+        recentEvents = CallEventStore.loadRecent(context, limit = 5)
         diagnostics = ScreeningDiagnosticsStore.load(context)
         assessment = runSampleAnalysis()
     }
@@ -374,8 +507,9 @@ private fun CallGuardianApp() {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 roleHeld = isCallScreeningRoleHeld(context)
+                batteryUnrestricted = isIgnoringBatteryOptimizations(context)
                 stats = CallStatsStore.loadLastSevenDays(context)
-                recentEvents = CallEventStore.loadRecent(context, limit = 50)
+                recentEvents = CallEventStore.loadRecent(context, limit = 5)
                 diagnostics = ScreeningDiagnosticsStore.load(context)
             }
         }
@@ -391,6 +525,7 @@ private fun CallGuardianApp() {
             warnThreshold = warnThreshold,
             silenceThreshold = silenceThreshold,
             blockThreshold = blockThreshold,
+            consentLevel = consentLevel,
             blockFailedVerification = blockFailedVerification,
             warnNeighborSpoof = warnNeighborSpoof,
             blockFirstSeenInternational = blockFirstSeenInternational,
@@ -405,104 +540,81 @@ private fun CallGuardianApp() {
 
     Scaffold(
         topBar = {
-            AppTopBar(
-                selectedScreen = selectedScreen,
-                onBack = {
-                    selectedScreen = when (selectedScreen) {
-                        AppScreen.BlockedRules, AppScreen.Test -> AppScreen.Whitelist
-                        AppScreen.Help -> helpTargetScreen
-                        else -> AppScreen.Dashboard
+            if (selectedScreen != AppScreen.Dashboard) {
+                AppTopBar(
+                    selectedScreen = selectedScreen,
+                    onBack = {
+                        selectedScreen = when (selectedScreen) {
+                            AppScreen.BlockedRules, AppScreen.Test -> AppScreen.Whitelist
+                            AppScreen.Help -> helpTargetScreen
+                            else -> AppScreen.Dashboard
+                        }
+                    },
+                    onOpenHelp = {
+                        if (selectedScreen != AppScreen.Help) {
+                            helpTargetScreen = selectedScreen
+                            activeHelpPage = helpPageForScreen(selectedScreen)
+                        }
+                        selectedScreen = AppScreen.Help
                     }
-                },
-                onOpenHelp = {
-                    if (selectedScreen != AppScreen.Help) {
-                        helpTargetScreen = selectedScreen
-                        activeHelpPage = helpPageForScreen(selectedScreen)
-                    }
-                    selectedScreen = AppScreen.Help
-                }
-            )
+                )
+            }
         },
         bottomBar = {
-            NavigationBar(containerColor = Color(0xFF171016), contentColor = Color(0xFFFFE8B6)) {
-                NavigationBarItem(
-                    selected = selectedScreen == AppScreen.Dashboard,
-                    onClick = { selectedScreen = AppScreen.Dashboard },
-                    modifier = Modifier.pressFeedback(),
-                    icon = { Icon(Icons.Filled.Security, contentDescription = null) },
-                    label = { Text(uiText("Protezione")) },
-                    colors = navItemColors()
-                )
-                NavigationBarItem(
-                    selected = selectedScreen == AppScreen.Whitelist,
-                    onClick = { selectedScreen = AppScreen.Whitelist },
-                    modifier = Modifier.pressFeedback(),
-                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
-                    label = { Text(uiText("Regole")) },
-                    colors = navItemColors()
-                )
-                NavigationBarItem(
-                    selected = selectedScreen == AppScreen.Settings,
-                    onClick = { selectedScreen = AppScreen.Settings },
-                    modifier = Modifier.pressFeedback(),
-                    icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
-                    label = { Text(uiText("Config.")) },
-                    colors = navItemColors()
-                )
-                NavigationBarItem(
-                    selected = selectedScreen == AppScreen.Log,
-                    onClick = { selectedScreen = AppScreen.Log },
-                    modifier = Modifier.pressFeedback(),
-                    icon = { Icon(Icons.Filled.Phone, contentDescription = null) },
-                    label = { Text(uiText("Log")) },
-                    colors = navItemColors()
+            if (!useNavigationRail) {
+                AppNavigationBar(
+                    selectedScreen = selectedScreen,
+                    onSelectScreen = { selectedScreen = it }
                 )
             }
         }
     ) { padding ->
-        when (selectedScreen) {
+        val screenPadding = if (useNavigationRail) {
+            PaddingValues(start = 88.dp)
+        } else {
+            PaddingValues(0.dp)
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            if (useNavigationRail) {
+                AppNavigationRail(
+                    selectedScreen = selectedScreen,
+                    onSelectScreen = { selectedScreen = it }
+                )
+            }
+            when (selectedScreen) {
             AppScreen.Dashboard -> DashboardScreen(
-                padding = padding,
+                padding = screenPadding,
                 roleHeld = roleHeld,
+                batteryUnrestricted = batteryUnrestricted,
                 assessment = assessment,
                 stats = stats,
-                recentEvents = recentEvents,
                 diagnostics = diagnostics,
-                manualFeedbackActions = manualFeedbackActions,
                 onEnableClick = {
                     requestCallScreeningRole(context)?.let(roleLauncher::launch)
                 },
+                onBatteryClick = {
+                    requestBatteryOptimizationExemption(context)
+                    batteryUnrestricted = isIgnoringBatteryOptimizations(context)
+                },
                 onOpenSettings = {
                     context.startActivity(Intent(Settings.ACTION_APPLICATION_SETTINGS))
-                },
-                onTrustMaskedPrefix = { maskedNumber ->
-                    val pattern = maskedNumber.toTrustedPrefixPattern()
-                    if (pattern != null && trustedPatterns.none { it == pattern }) {
-                        trustedPatterns.add(pattern)
-                        saveAndApplyWhitelist(context, trustedPatterns)
-                        assessment = runSampleAnalysis()
-                    }
-                },
-                onBlockMaskedPrefix = { maskedNumber ->
-                    val pattern = maskedNumber.toTrustedPrefixPattern()
-                    if (pattern != null && blockedPatterns.none { it.blockPatternOnly() == pattern }) {
-                        blockedPatterns.add(pattern)
-                        saveAndApplyBlocklist(context, blockedPatterns)
-                        assessment = runSampleAnalysis()
-                    }
                 },
                 onRefresh = {
                     persistPolicy()
                     saveAndApplyWhitelist(context, trustedPatterns)
                     stats = CallStatsStore.loadLastSevenDays(context)
-                    recentEvents = CallEventStore.loadRecent(context, limit = 50)
+                    recentEvents = CallEventStore.loadRecent(context, limit = 5)
                     diagnostics = ScreeningDiagnosticsStore.load(context)
                     assessment = runSampleAnalysis()
                 }
             )
 
             AppScreen.Whitelist -> WhitelistScreen(
-                padding = padding,
+                padding = screenPadding,
                 trustedPatterns = trustedPatterns,
                 blockedPatterns = blockedPatterns,
                 onAddPattern = { pattern ->
@@ -562,10 +674,11 @@ private fun CallGuardianApp() {
             )
 
             AppScreen.Settings -> SettingsScreen(
-                padding = padding,
+                padding = screenPadding,
                 warnThreshold = warnThreshold,
                 silenceThreshold = silenceThreshold,
                 blockThreshold = blockThreshold,
+                consentLevel = consentLevel,
                 blockFailedVerification = blockFailedVerification,
                 warnNeighborSpoof = warnNeighborSpoof,
                 blockFirstSeenInternational = blockFirstSeenInternational,
@@ -587,6 +700,11 @@ private fun CallGuardianApp() {
                 },
                 onBlockThresholdChange = {
                     blockThreshold = it.coerceIn(silenceThreshold, 0.95f)
+                    persistPolicy()
+                    assessment = runSampleAnalysis()
+                },
+                onConsentLevelChange = {
+                    consentLevel = it.coerceIn(0, 3)
                     persistPolicy()
                     assessment = runSampleAnalysis()
                 },
@@ -641,13 +759,14 @@ private fun CallGuardianApp() {
                     ScreeningDiagnosticsStore.clear(context)
                     CallPatternStore.clear(context)
                     stats = CallStatsStore.loadLastSevenDays(context)
-                    recentEvents = CallEventStore.loadRecent(context, limit = 50)
+                    recentEvents = CallEventStore.loadRecent(context, limit = 5)
                     diagnostics = ScreeningDiagnosticsStore.load(context)
                 },
                 onApplyPreset = { preset ->
                     warnThreshold = preset.policy.warnThreshold
                     silenceThreshold = preset.policy.silenceThreshold
                     blockThreshold = preset.policy.blockThreshold
+                    consentLevel = preset.policy.consentLevel
                     blockFailedVerification = preset.policy.blockFailedVerification
                     warnNeighborSpoof = preset.policy.warnNeighborSpoof
                     blockFirstSeenInternational = preset.policy.blockFirstSeenInternational
@@ -671,7 +790,7 @@ private fun CallGuardianApp() {
             )
 
             AppScreen.Log -> BlockedCallLogScreen(
-                padding = padding,
+                padding = screenPadding,
                 recentEvents = recentEvents,
                 manualFeedbackActions = manualFeedbackActions,
                 onTrustMaskedPrefix = { maskedNumber ->
@@ -691,12 +810,12 @@ private fun CallGuardianApp() {
                     }
                 },
                 onRefresh = {
-                    recentEvents = CallEventStore.loadRecent(context, limit = 50)
+                    recentEvents = CallEventStore.loadRecent(context, limit = 5)
                 }
             )
 
             AppScreen.BlockedRules -> BlockedRulesScreen(
-                padding = padding,
+                padding = screenPadding,
                 blockedPatterns = blockedPatterns,
                 onRemoveBlockedPattern = { pattern ->
                     blockedPatterns.remove(pattern)
@@ -709,7 +828,7 @@ private fun CallGuardianApp() {
             )
 
             AppScreen.Test -> TestScreen(
-                padding = padding,
+                padding = screenPadding,
                 onBackToRules = {
                     selectedScreen = AppScreen.Whitelist
                 },
@@ -733,13 +852,96 @@ private fun CallGuardianApp() {
             )
 
             AppScreen.Help -> HelpScreen(
-                padding = padding,
+                padding = screenPadding,
                 page = activeHelpPage,
                 onBack = {
                     selectedScreen = helpTargetScreen
                 }
             )
+            }
         }
+    }
+}
+
+@Composable
+private fun AppNavigationBar(
+    selectedScreen: AppScreen,
+    onSelectScreen: (AppScreen) -> Unit
+) {
+    NavigationBar(containerColor = Color(0xFF171016), contentColor = Color(0xFFFFE8B6)) {
+        NavigationBarItem(
+            selected = selectedScreen == AppScreen.Dashboard,
+            onClick = { onSelectScreen(AppScreen.Dashboard) },
+            modifier = Modifier.pressFeedback(),
+            icon = { Icon(Icons.Filled.Security, contentDescription = null) },
+            label = { Text(uiText("Protezione")) },
+            colors = navItemColors()
+        )
+        NavigationBarItem(
+            selected = selectedScreen == AppScreen.Whitelist,
+            onClick = { onSelectScreen(AppScreen.Whitelist) },
+            modifier = Modifier.pressFeedback(),
+            icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
+            label = { Text(uiText("Regole")) },
+            colors = navItemColors()
+        )
+        NavigationBarItem(
+            selected = selectedScreen == AppScreen.Settings,
+            onClick = { onSelectScreen(AppScreen.Settings) },
+            modifier = Modifier.pressFeedback(),
+            icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
+            label = { Text(uiText("Config.")) },
+            colors = navItemColors()
+        )
+        NavigationBarItem(
+            selected = selectedScreen == AppScreen.Log,
+            onClick = { onSelectScreen(AppScreen.Log) },
+            modifier = Modifier.pressFeedback(),
+            icon = { Icon(Icons.Filled.Phone, contentDescription = null) },
+            label = { Text(uiText("Log")) },
+            colors = navItemColors()
+        )
+    }
+}
+
+@Composable
+private fun AppNavigationRail(
+    selectedScreen: AppScreen,
+    onSelectScreen: (AppScreen) -> Unit
+) {
+    NavigationRail(containerColor = Color(0xFF171016), contentColor = Color(0xFFFFE8B6)) {
+        NavigationRailItem(
+            selected = selectedScreen == AppScreen.Dashboard,
+            onClick = { onSelectScreen(AppScreen.Dashboard) },
+            modifier = Modifier.pressFeedback(),
+            icon = { Icon(Icons.Filled.Security, contentDescription = null) },
+            label = { Text(uiText("Protezione")) },
+            colors = navRailItemColors()
+        )
+        NavigationRailItem(
+            selected = selectedScreen == AppScreen.Whitelist,
+            onClick = { onSelectScreen(AppScreen.Whitelist) },
+            modifier = Modifier.pressFeedback(),
+            icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
+            label = { Text(uiText("Regole")) },
+            colors = navRailItemColors()
+        )
+        NavigationRailItem(
+            selected = selectedScreen == AppScreen.Settings,
+            onClick = { onSelectScreen(AppScreen.Settings) },
+            modifier = Modifier.pressFeedback(),
+            icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
+            label = { Text(uiText("Config.")) },
+            colors = navRailItemColors()
+        )
+        NavigationRailItem(
+            selected = selectedScreen == AppScreen.Log,
+            onClick = { onSelectScreen(AppScreen.Log) },
+            modifier = Modifier.pressFeedback(),
+            icon = { Icon(Icons.Filled.Phone, contentDescription = null) },
+            label = { Text(uiText("Log")) },
+            colors = navRailItemColors()
+        )
     }
 }
 
@@ -755,14 +957,38 @@ private fun AppTopBar(
         selectedScreen == AppScreen.Test ||
         selectedScreen == AppScreen.Help
 
-    TopAppBar(
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = if (isMainScreen) Color(0xFF140E12) else Color(0xFF100B0F),
-            titleContentColor = Color(0xFFFFE8B6),
-            navigationIconContentColor = Color(0xFFFFE8B6),
-            actionIconContentColor = Color(0xFFFFE8B6)
-        ),
-        navigationIcon = {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(138.dp)
+            .background(Color(0xFF100B0F))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(92.dp)
+                .clip(RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp))
+                .background(Color(0xFF0D0B10))
+        ) {
+            Image(
+                painter = painterResource(R.drawable.freyashield_brand),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0x33100B0F))
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(92.dp)
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             if (hasBackNavigation) {
                 IconButton(
                     onClick = onBack,
@@ -773,18 +999,27 @@ private fun AppTopBar(
                         contentDescription = uiText("Indietro")
                     )
                 }
+            } else {
+                Spacer(Modifier.size(48.dp))
             }
-        },
-        title = {
+        }
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .fillMaxWidth()
+                .height(46.dp)
+                .padding(start = 20.dp, end = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
                 if (isMainScreen) "FreyaShield" else uiText(helpTitle(selectedScreen)),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
+                color = Color(0xFFFFE8B6),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
-        },
-        actions = {
             if (selectedScreen != AppScreen.Help) {
                 IconButton(
                     onClick = onOpenHelp,
@@ -792,24 +1027,24 @@ private fun AppTopBar(
                 ) {
                     Icon(Icons.AutoMirrored.Filled.Help, contentDescription = uiText("Aiuto"))
                 }
+            } else {
+                Spacer(Modifier.size(48.dp))
             }
         }
-    )
+    }
 }
 
 @Composable
 private fun DashboardScreen(
     padding: PaddingValues,
     roleHeld: Boolean,
+    batteryUnrestricted: Boolean,
     assessment: PlatformRiskAssessment?,
     stats: CallStatsSnapshot,
-    recentEvents: List<CallEvent>,
     diagnostics: ScreeningDiagnostics,
-    manualFeedbackActions: Boolean,
     onEnableClick: () -> Unit,
+    onBatteryClick: () -> Unit,
     onOpenSettings: () -> Unit,
-    onTrustMaskedPrefix: (String) -> Unit,
-    onBlockMaskedPrefix: (String) -> Unit,
     onRefresh: () -> Unit
 ) {
     LazyColumn(
@@ -823,13 +1058,18 @@ private fun DashboardScreen(
             BrandPanel(roleHeld = roleHeld)
         }
         item {
-            StatusPanel(roleHeld = roleHeld, onEnableClick = onEnableClick)
+            StatusPanel(
+                roleHeld = roleHeld,
+                batteryUnrestricted = batteryUnrestricted,
+                onEnableClick = onEnableClick,
+                onBatteryClick = onBatteryClick
+            )
         }
         item {
             CardPanel {
-                Text(uiText("Analisi core"), style = MaterialTheme.typography.titleMedium)
+                Text(uiText("Verifica motore"), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(10.dp))
-                MetricRow("Numero test", maskPhoneNumber("+393479998888"))
+                MetricRow("Numero verificato", maskPhoneNumber("+393479998888"))
                 if (assessment == null) {
                     MetricRow("Stato", "Inizializzazione")
                 } else {
@@ -873,24 +1113,6 @@ private fun DashboardScreen(
                 MetricRow("Invocazioni", diagnostics.invocationCount.toString())
                 MetricRow("Ultima chiamata", diagnostics.lastMaskedNumber)
                 MetricRow("Ultimo evento", CallEventStore.formatTime(diagnostics.lastTimestampMillis))
-            }
-        }
-        item {
-            CardPanel {
-                Text(uiText("Registro recente"), style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(10.dp))
-                if (recentEvents.isEmpty()) {
-                    Text(uiText("Nessuna chiamata registrata."), style = MaterialTheme.typography.bodyMedium)
-                } else {
-                    recentEvents.take(5).forEach { event ->
-                        EventRow(
-                            event = event,
-                            manualFeedbackActions = manualFeedbackActions,
-                            onTrustMaskedPrefix = onTrustMaskedPrefix,
-                            onBlockMaskedPrefix = onBlockMaskedPrefix
-                        )
-                    }
-                }
             }
         }
     }
@@ -1027,10 +1249,19 @@ private fun BlockedCallLogScreen(
 }
 
 @Composable
-private fun StatusPanel(roleHeld: Boolean, onEnableClick: () -> Unit) {
-    val title = uiText(if (roleHeld) "Protezzione Attiva" else "Protezione da attivare")
+private fun StatusPanel(
+    roleHeld: Boolean,
+    batteryUnrestricted: Boolean,
+    onEnableClick: () -> Unit,
+    onBatteryClick: () -> Unit
+) {
+    val title = uiText(if (roleHeld) "Protezione attiva" else "Protezione da attivare")
     val body = if (roleHeld) {
-        uiText("Freya controlla!")
+        if (batteryUnrestricted) {
+            uiText("Freya controlla!")
+        } else {
+            uiText("Freya controlla, ma la batteria può limitarla.")
+        }
     } else {
         uiText("Abilita FreyaShield come app di filtro chiamate per proteggere le chiamate in arrivo.")
     }
@@ -1059,6 +1290,11 @@ private fun StatusPanel(roleHeld: Boolean, onEnableClick: () -> Unit) {
             Spacer(Modifier.height(14.dp))
             Button(onClick = onEnableClick, modifier = Modifier.fillMaxWidth().pressFeedback()) {
                 Text(uiText("Attiva filtro chiamate"))
+            }
+        } else if (!batteryUnrestricted) {
+            Spacer(Modifier.height(14.dp))
+            Button(onClick = onBatteryClick, modifier = Modifier.fillMaxWidth().pressFeedback()) {
+                Text(uiText("Consenti batteria senza limiti"))
             }
         }
     }
@@ -1094,7 +1330,7 @@ private fun WhitelistScreen(
             CardPanel {
                 HelpableTitle("Strumenti regole", onHelpClick = { onOpenHelp("rules_tools") })
                 Text(
-                    "Consulta blocchi salvati o prova scenari senza chiamate reali.",
+                    "Consulta blocchi salvati o apri il simulatore senza chiamate reali.",
                     style = MaterialTheme.typography.bodySmall
                 )
                 Spacer(Modifier.height(10.dp))
@@ -1113,8 +1349,8 @@ private fun WhitelistScreen(
                         onClick = onOpenTests,
                         modifier = Modifier.weight(1f).pressFeedback()
                     ) {
-                        Icon(Icons.Filled.BugReport, contentDescription = null)
-                        Text(uiText("Prove"), modifier = Modifier.padding(start = 8.dp))
+                        Icon(Icons.Filled.Security, contentDescription = null)
+                        Text(uiText("Simulatore"), modifier = Modifier.padding(start = 8.dp))
                     }
                 }
             }
@@ -1340,6 +1576,7 @@ private fun SettingsScreen(
     warnThreshold: Float,
     silenceThreshold: Float,
     blockThreshold: Float,
+    consentLevel: Int,
     blockFailedVerification: Boolean,
     warnNeighborSpoof: Boolean,
     blockFirstSeenInternational: Boolean,
@@ -1352,6 +1589,7 @@ private fun SettingsScreen(
     onWarnThresholdChange: (Float) -> Unit,
     onSilenceThresholdChange: (Float) -> Unit,
     onBlockThresholdChange: (Float) -> Unit,
+    onConsentLevelChange: (Int) -> Unit,
     onBlockFailedVerificationChange: (Boolean) -> Unit,
     onWarnNeighborSpoofChange: (Boolean) -> Unit,
     onBlockFirstSeenInternationalChange: (Boolean) -> Unit,
@@ -1368,9 +1606,10 @@ private fun SettingsScreen(
 ) {
     val presets = remember { protectionPresets() }
     val activePreset = presets.firstOrNull {
-        it.policy.warnThreshold == warnThreshold &&
+            it.policy.warnThreshold == warnThreshold &&
             it.policy.silenceThreshold == silenceThreshold &&
             it.policy.blockThreshold == blockThreshold &&
+            it.policy.consentLevel == consentLevel &&
             it.policy.blockFailedVerification == blockFailedVerification &&
             it.policy.warnNeighborSpoof == warnNeighborSpoof &&
             it.policy.blockFirstSeenInternational == blockFirstSeenInternational &&
@@ -1391,7 +1630,7 @@ private fun SettingsScreen(
     ) {
         item {
             CardPanel {
-                HelpableTitle("Modalita protezione", onHelpClick = { onOpenHelp("protection_mode") })
+                HelpableTitle("Modalità protezione", onHelpClick = { onOpenHelp("protection_mode") })
                 Spacer(Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -1412,6 +1651,30 @@ private fun SettingsScreen(
                         presets.firstOrNull { it.title == activePreset }?.description
                             ?: "Configurazione personalizzata."
                     ),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+        item {
+            CardPanel {
+                HelpableTitle("Livello consenso", onHelpClick = { onOpenHelp("consent_level") })
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    consentLevelOptions().forEach { option ->
+                        FilterChip(
+                            selected = consentLevel == option.level,
+                            onClick = { onConsentLevelChange(option.level) },
+                            modifier = Modifier.pressFeedback(),
+                            label = { Text(uiText(option.title)) }
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    uiText(consentLevelOptions().first { it.level == consentLevel.coerceIn(0, 3) }.description),
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -1583,7 +1846,7 @@ private fun TestScreen(
     ) {
         item {
             CardPanel {
-                Text(uiText("Prove regole"), style = MaterialTheme.typography.titleMedium)
+                Text(uiText("Simulatore regole"), style = MaterialTheme.typography.titleMedium)
                 Text(uiText("Simulatore locale per verificare soglie, whitelist e blocchi."), style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(10.dp))
                 OutlinedButton(onClick = onBackToRules, modifier = Modifier.fillMaxWidth().pressFeedback()) {
@@ -1599,12 +1862,12 @@ private fun TestScreen(
                 OutlinedTextField(
                     value = customNumber,
                     onValueChange = { customNumber = it },
-                    label = { Text(uiText("Numero da testare")) },
+                    label = { Text(uiText("Numero da verificare")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 ToggleRow(
-                    title = "Gia visto",
+                    title = "Già visto",
                     checked = customSeenBefore,
                     onCheckedChange = { customSeenBefore = it }
                 )
@@ -1634,7 +1897,7 @@ private fun TestScreen(
                     },
                     modifier = Modifier.fillMaxWidth().pressFeedback()
                 ) {
-                    Icon(Icons.Filled.BugReport, contentDescription = null)
+                    Icon(Icons.Filled.Security, contentDescription = null)
                     Text(uiText("Analizza"), modifier = Modifier.padding(start = 8.dp))
                 }
                 lastCustomResult?.let { result ->
@@ -1668,7 +1931,7 @@ private fun TestScreen(
             CardPanel {
                 Text(uiText("Scenari rapidi"), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(8.dp))
-                Text(uiText("Test locali senza chiamate reali e senza salvare numeri."), style = MaterialTheme.typography.bodyMedium)
+                Text(uiText("Simulazioni locali senza chiamate reali e senza salvare numeri."), style = MaterialTheme.typography.bodyMedium)
             }
         }
 
@@ -1700,8 +1963,8 @@ private fun TestScreen(
                     },
                     modifier = Modifier.fillMaxWidth().pressFeedback()
                 ) {
-                    Icon(Icons.Filled.BugReport, contentDescription = null)
-                    Text(uiText("Esegui test"), modifier = Modifier.padding(start = 8.dp))
+                    Icon(Icons.Filled.Security, contentDescription = null)
+                    Text(uiText("Esegui verifica"), modifier = Modifier.padding(start = 8.dp))
                 }
             }
         }
@@ -1736,7 +1999,7 @@ private fun ThresholdSlider(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(uiText("Meno interventi"), style = MaterialTheme.typography.bodySmall)
-        Text(uiText("Piu protezione"), style = MaterialTheme.typography.bodySmall)
+        Text(uiText("Più protezione"), style = MaterialTheme.typography.bodySmall)
     }
     Slider(
         value = protectionLevel,
@@ -1922,6 +2185,15 @@ private fun navItemColors() = NavigationBarItemDefaults.colors(
     unselectedTextColor = Color(0xFF9F8E92)
 )
 
+@Composable
+private fun navRailItemColors() = NavigationRailItemDefaults.colors(
+    selectedIconColor = Color(0xFF0D0B10),
+    selectedTextColor = Color(0xFFFFE8B6),
+    indicatorColor = Color(0xFFFF3D3D),
+    unselectedIconColor = Color(0xFF9F8E92),
+    unselectedTextColor = Color(0xFF9F8E92)
+)
+
 private fun Modifier.pressFeedback(): Modifier = composed {
     var pressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
@@ -1947,6 +2219,22 @@ private fun isCallScreeningRoleHeld(context: Context): Boolean {
     return roleManager.isRoleHeld(RoleManager.ROLE_CALL_SCREENING)
 }
 
+private fun isIgnoringBatteryOptimizations(context: Context): Boolean {
+    val powerManager = context.getSystemService(PowerManager::class.java) ?: return true
+    return powerManager.isIgnoringBatteryOptimizations(context.packageName)
+}
+
+private fun requestBatteryOptimizationExemption(context: Context) {
+    val packageUri = Uri.parse("package:${context.packageName}")
+    val directIntent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, packageUri)
+    val fallbackIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+    runCatching {
+        context.startActivity(directIntent)
+    }.recoverCatching {
+        context.startActivity(fallbackIntent)
+    }
+}
+
 private fun requestCallScreeningRole(context: Context): Intent? {
     val roleManager = context.getSystemService(RoleManager::class.java) ?: return null
     return if (roleManager.isRoleAvailable(RoleManager.ROLE_CALL_SCREENING) &&
@@ -1958,6 +2246,31 @@ private fun requestCallScreeningRole(context: Context): Intent? {
     }
 }
 
+private fun consentLevelOptions(): List<ConsentLevelOption> {
+    return listOf(
+        ConsentLevelOption(
+            level = 0,
+            title = "Solo registro",
+            description = "Registra e spiega, senza intervenire sulla chiamata."
+        ),
+        ConsentLevelOption(
+            level = 1,
+            title = "Avviso manuale",
+            description = "Consenso prudente: l'app segnala il rischio ma lascia passare la chiamata."
+        ),
+        ConsentLevelOption(
+            level = 2,
+            title = "Può silenziare",
+            description = "Consenso medio: può silenziare, ma non bloccare o rifiutare."
+        ),
+        ConsentLevelOption(
+            level = 3,
+            title = "Può bloccare",
+            description = "Consenso alto: può bloccare solo quando le regole e le soglie lo richiedono."
+        )
+    )
+}
+
 private fun protectionPresets(): List<ProtectionPreset> {
     return listOf(
         ProtectionPreset(
@@ -1967,6 +2280,7 @@ private fun protectionPresets(): List<ProtectionPreset> {
                 warnThreshold = 0.30f,
                 silenceThreshold = 0.62f,
                 blockThreshold = 0.82f,
+                consentLevel = 1,
                 blockFailedVerification = false,
                 warnNeighborSpoof = true,
                 blockFirstSeenInternational = false
@@ -1979,11 +2293,12 @@ private fun protectionPresets(): List<ProtectionPreset> {
         ),
         ProtectionPreset(
             title = "Alta",
-            description = "Piu severa su verifica fallita, spoofing vicino e numeri esteri nuovi.",
+            description = "Più severa su verifica fallita, spoofing vicino e numeri esteri nuovi.",
             policy = PolicySettings(
                 warnThreshold = 0.25f,
                 silenceThreshold = 0.42f,
                 blockThreshold = 0.58f,
+                consentLevel = 2,
                 blockFailedVerification = true,
                 warnNeighborSpoof = true,
                 blockFirstSeenInternational = true
@@ -1996,6 +2311,7 @@ private fun protectionPresets(): List<ProtectionPreset> {
                 warnThreshold = 0.22f,
                 silenceThreshold = 0.38f,
                 blockThreshold = 0.55f,
+                consentLevel = 3,
                 blockFailedVerification = true,
                 warnNeighborSpoof = true,
                 blockHighFrequencyRobocall = true,
@@ -2018,7 +2334,7 @@ private fun helpTitle(screen: AppScreen): String {
         AppScreen.Settings -> "Configurazioni"
         AppScreen.Log -> "Log"
         AppScreen.BlockedRules -> "Blocchi attivi"
-        AppScreen.Test -> "Prove regole"
+        AppScreen.Test -> "Simulatore regole"
         AppScreen.Help -> "Aiuto"
     }
 }
@@ -2030,33 +2346,33 @@ private fun helpPageForScreen(screen: AppScreen): HelpPage {
 private fun helpPageForSetting(key: String): HelpPage {
     return when (key) {
         "protection_mode" -> HelpPage(
-            "Modalita protezione",
+            "Modalità protezione",
             listOf(
-                HelpTopic("Cosa controlla", "I preset modificano piu impostazioni insieme. Bassa riduce i blocchi automatici, Standard mantiene un equilibrio, Alta aumenta la severita, Call center applica controlli piu rigorosi contro chiamate ripetute e non verificate."),
-                HelpTopic("Benefici", "Ti permette di cambiare rapidamente comportamento senza regolare ogni singolo livello. Call center e utile quando ricevi molte chiamate pubblicitarie o numeri molto simili."),
-                HelpTopic("Effetti collaterali", "Preset piu aggressivi possono bloccare chiamate legittime, soprattutto numeri nuovi, centralini aziendali, corrieri o servizi che usano prefissi condivisi.")
+                HelpTopic("Cosa controlla", "I preset modificano più impostazioni insieme. Bassa riduce i blocchi automatici, Standard mantiene un equilibrio, Alta aumenta la severità, Call center applica controlli più rigorosi contro chiamate ripetute e non verificate."),
+                HelpTopic("Benefici", "Ti permette di cambiare rapidamente comportamento senza regolare ogni singolo livello. Call center è utile quando ricevi molte chiamate pubblicitarie o numeri molto simili."),
+                HelpTopic("Effetti collaterali", "Preset più aggressivi possono bloccare chiamate legittime, soprattutto numeri nuovi, centralini aziendali, corrieri o servizi che usano prefissi condivisi.")
             )
         )
         "warn_threshold" -> HelpPage(
             "Livello Avviso",
             listOf(
-                HelpTopic("Cosa fa", "Decide quanto presto FreyaShield deve considerare una chiamata sospetta. Spostando il cursore verso piu protezione, l'app avvisa prima anche con segnali piu leggeri."),
+                HelpTopic("Cosa fa", "Decide quanto presto FreyaShield deve considerare una chiamata sospetta. Spostando il cursore verso più protezione, l'app avvisa prima anche con segnali più leggeri."),
                 HelpTopic("Benefici", "Ti aiuta a notare subito numeri mai visti, pattern strani o comportamenti debolmente sospetti senza arrivare per forza al silenzio o al blocco."),
-                HelpTopic("Effetti collaterali", "Se lo rendi molto sensibile, piu chiamate legittime potranno apparire come sospette. Non vengono necessariamente bloccate, ma il registro risultera piu prudente.")
+                HelpTopic("Effetti collaterali", "Se lo rendi molto sensibile, più chiamate legittime potranno apparire come sospette. Non vengono necessariamente bloccate, ma il registro risulterà più prudente.")
             )
         )
         "silence_threshold" -> HelpPage(
             "Livello Silenzia",
             listOf(
-                HelpTopic("Cosa fa", "Decide quanto presto FreyaShield deve togliere lo squillo a una chiamata sospetta. Verso piu protezione, silenzia con segnali meno pesanti."),
-                HelpTopic("Benefici", "Riduce il fastidio dei call center senza respingere subito la chiamata. E la via di mezzo piu comoda quando vuoi meno disturbo ma non vuoi bloccare troppo."),
+                HelpTopic("Cosa fa", "Decide quanto presto FreyaShield deve togliere lo squillo a una chiamata sospetta. Verso più protezione, silenzia con segnali meno pesanti."),
+                HelpTopic("Benefici", "Riduce il fastidio dei call center senza respingere subito la chiamata. È la via di mezzo più comoda quando vuoi meno disturbo ma non vuoi bloccare troppo."),
                 HelpTopic("Effetti collaterali", "Se lo rendi molto protettivo, potresti non sentire chiamate nuove ma legittime. Metti in whitelist i numeri importanti.")
             )
         )
         "block_threshold" -> HelpPage(
             "Livello Blocca",
             listOf(
-                HelpTopic("Cosa fa", "Decide quanto presto FreyaShield deve respingere una chiamata. Verso piu protezione, il blocco scatta con meno tolleranza al rischio."),
+                HelpTopic("Cosa fa", "Decide quanto presto FreyaShield deve respingere una chiamata. Verso più protezione, il blocco scatta con meno tolleranza al rischio."),
                 HelpTopic("Benefici", "Ferma automaticamente chiamate con segnali forti, come verifica fallita, prefissi insistenti, blocklist o combinazioni molto sospette."),
                 HelpTopic("Effetti collaterali", "Se lo rendi troppo protettivo, alcuni numeri nuovi ma legittimi potrebbero essere bloccati prima che tu li veda.")
             )
@@ -2065,7 +2381,7 @@ private fun helpPageForSetting(key: String): HelpPage {
             "Blocca verifica fallita",
             listOf(
                 HelpTopic("Cosa fa", "Usa il controllo ID chiamata fornito da Android e dall'operatore. Se il sistema segnala verifica fallita, FreyaShield porta la chiamata direttamente nell'area di blocco."),
-                HelpTopic("Benefici", "E una delle difese piu forti contro lo spoofing, cioe chiamate che mostrano un numero non realmente autorizzato dal chiamante."),
+                HelpTopic("Benefici", "È una delle difese più forti contro lo spoofing, cioè chiamate che mostrano un numero non realmente autorizzato dal chiamante."),
                 HelpTopic("Effetti collaterali", "Non tutti gli operatori e centralini gestiscono la verifica allo stesso modo. In casi rari, centralini aziendali o servizi VoIP legittimi potrebbero risultare non affidabili.")
             )
         )
@@ -2074,13 +2390,13 @@ private fun helpPageForSetting(key: String): HelpPage {
             listOf(
                 HelpTopic("Cosa fa", "Rileva numeri che condividono molte cifre iniziali con il tuo numero o prefisso, tecnica usata per sembrare locali o familiari."),
                 HelpTopic("Benefici", "Aiuta contro chiamate truffa che imitano numeri della tua zona o del tuo stesso prefisso mobile."),
-                HelpTopic("Effetti collaterali", "In aree con molti numeri simili o centralini legittimi, puo aumentare il rischio di chiamate innocue. La whitelist risolve i casi affidabili.")
+                HelpTopic("Effetti collaterali", "In aree con molti numeri simili o centralini legittimi, può aumentare il rischio di chiamate innocue. La whitelist risolve i casi affidabili.")
             )
         )
         "first_seen_international" -> HelpPage(
             "Blocca estero non salvato",
             listOf(
-                HelpTopic("Cosa fa", "Aumenta molto il rischio dei numeri internazionali mai visti prima quando l'utente e configurato su Italia."),
+                HelpTopic("Cosa fa", "Aumenta molto il rischio dei numeri internazionali mai visti prima quando l'utente è configurato su Italia."),
                 HelpTopic("Benefici", "Riduce molte campagne spam o truffe che arrivano da prefissi esteri inattesi."),
                 HelpTopic("Effetti collaterali", "Se ricevi chiamate legittime dall'estero, da clienti o da servizi internazionali, potresti dover aggiungere whitelist mirate.")
             )
@@ -2088,15 +2404,15 @@ private fun helpPageForSetting(key: String): HelpPage {
         "auto_block_similar" -> HelpPage(
             "Auto-blocca numeri simili",
             listOf(
-                HelpTopic("Cosa fa", "Memorizza localmente, tramite hash, quante chiamate arrivano dallo stesso numero o prefisso in finestre brevi. Se un prefisso insiste e la chiamata e gia sospetta, forza il blocco."),
-                HelpTopic("Benefici", "E efficace contro call center che ruotano le ultime cifre del numero per aggirare i blocchi manuali."),
-                HelpTopic("Effetti collaterali", "Puo colpire centralini legittimi che chiamano piu volte da interni simili. In quel caso aggiungi il prefisso alla whitelist o disattiva l'opzione.")
+                HelpTopic("Cosa fa", "Memorizza localmente, tramite hash, quante chiamate arrivano dallo stesso numero o prefisso in finestre brevi. Se un prefisso insiste e la chiamata è già sospetta, forza il blocco."),
+                HelpTopic("Benefici", "È efficace contro call center che ruotano le ultime cifre del numero per aggirare i blocchi manuali."),
+                HelpTopic("Effetti collaterali", "Può colpire centralini legittimi che chiamano più volte da interni simili. In quel caso aggiungi il prefisso alla whitelist o disattiva l'opzione.")
             )
         )
         "temporary_greylist" -> HelpPage(
             "Quarantena temporanea prefissi",
             listOf(
-                HelpTopic("Cosa fa", "Quando un prefisso genera piu eventi filtrati, viene messo in quarantena per 7 giorni. La memoria usa hash locali e non conserva numeri completi."),
+                HelpTopic("Cosa fa", "Quando un prefisso genera più eventi filtrati, viene messo in quarantena per 7 giorni. La memoria usa hash locali e non conserva numeri completi."),
                 HelpTopic("Benefici", "Blocca automaticamente raffiche temporanee senza creare una regola permanente che potresti dimenticare."),
                 HelpTopic("Effetti collaterali", "Durante la quarantena possono essere bloccate chiamate legittime dallo stesso gruppo di numeri. La cancellazione dati locali rimuove anche questa memoria.")
             )
@@ -2104,8 +2420,8 @@ private fun helpPageForSetting(key: String): HelpPage {
         "unverified_suspicious" -> HelpPage(
             "Blocca sospetti non verificati",
             listOf(
-                HelpTopic("Cosa fa", "Se una chiamata non ha verifica positiva e ha gia raggiunto almeno il livello Avviso, viene portata direttamente al blocco."),
-                HelpTopic("Benefici", "Stringe la difesa contro chiamate opache: non basta essere sconosciuti, ma sconosciuti piu un altro segnale sospetto."),
+                HelpTopic("Cosa fa", "Se una chiamata non ha verifica positiva e ha già raggiunto almeno il livello Avviso, viene portata direttamente al blocco."),
+                HelpTopic("Benefici", "Stringe la difesa contro chiamate opache: non basta essere sconosciuti, ma sconosciuti più un altro segnale sospetto."),
                 HelpTopic("Effetti collaterali", "Alcuni operatori non forniscono sempre verifica positiva. Potrebbe quindi bloccare chiamate nuove ma lecite se hanno altri segnali deboli.")
             )
         )
@@ -2113,7 +2429,7 @@ private fun helpPageForSetting(key: String): HelpPage {
             "Filtro sera e notte",
             listOf(
                 HelpTopic("Cosa fa", "Dalle 20 alle 8 silenzia chiamate sospette e non verificate. Le chiamate fidate continuano a passare."),
-                HelpTopic("Benefici", "Riduce il disturbo nelle ore piu fastidiose senza applicare per forza blocchi permanenti."),
+                HelpTopic("Benefici", "Riduce il disturbo nelle ore più fastidiose senza applicare per forza blocchi permanenti."),
                 HelpTopic("Effetti collaterali", "Potresti non sentire chiamate legittime urgenti da numeri nuovi. Usa whitelist per familiari, lavoro, medici, corrieri o servizi importanti.")
             )
         )
@@ -2121,8 +2437,8 @@ private fun helpPageForSetting(key: String): HelpPage {
             "Solo regole fidate",
             listOf(
                 HelpTopic("Cosa fa", "Consente solo numeri o prefissi presenti nelle regole fidate. Tutto il resto viene bloccato prima delle valutazioni normali."),
-                HelpTopic("Benefici", "E la modalita piu restrittiva quando vuoi ridurre al minimo le chiamate non previste."),
-                HelpTopic("Effetti collaterali", "Blocca quasi tutto cio che non hai previsto. Non e consigliata se aspetti chiamate da numeri nuovi, uffici pubblici, consegne, assistenza o appuntamenti.")
+                HelpTopic("Benefici", "È la modalità più restrittiva quando vuoi ridurre al minimo le chiamate non previste."),
+                HelpTopic("Effetti collaterali", "Blocca quasi tutto ciò che non hai previsto. Non è consigliata se aspetti chiamate da numeri nuovi, uffici pubblici, consegne, assistenza o appuntamenti.")
             )
         )
         "manual_feedback" -> HelpPage(
@@ -2170,7 +2486,7 @@ private fun helpPageForSetting(key: String): HelpPage {
             listOf(
                 HelpTopic("Cosa fa", "Crea una regola blocklist con asterisco finale. Se inserisci 081123, il filtro blocca i numeri che iniziano con quel prefisso normalizzato."),
                 HelpTopic("Benefici", "E molto efficace contro call center che cambiano solo le ultime cifre mantenendo lo stesso inizio."),
-                HelpTopic("Effetti collaterali", "Un prefisso troppo corto puo bloccare molte chiamate legittime della stessa area o dello stesso centralino. Se succede, rimuovi la regola da Blocchi attivi.")
+                HelpTopic("Effetti collaterali", "Un prefisso troppo corto può bloccare molte chiamate legittime della stessa area o dello stesso centralino. Se succede, rimuovi la regola da Blocchi attivi.")
             )
         )
         "country_area_blocks" -> HelpPage(
@@ -2178,7 +2494,7 @@ private fun helpPageForSetting(key: String): HelpPage {
             listOf(
                 HelpTopic("Cosa fa", "Aggiunge alla blocklist un prefisso internazionale o un prefisso geografico italiano. Le chiamate che iniziano con quel codice vengono bloccate."),
                 HelpTopic("Benefici", "Utile se ricevi spam sistematico da paesi o aree da cui non aspetti chiamate."),
-                HelpTopic("Effetti collaterali", "Bloccare un'intera nazione o area e una scelta ampia. Puo fermare anche banche, assistenza, spedizioni o contatti legittimi che usano quel prefisso.")
+                HelpTopic("Effetti collaterali", "Bloccare un'intera nazione o area è una scelta ampia. Può fermare anche banche, assistenza, spedizioni o contatti legittimi che usano quel prefisso.")
             )
         )
         else -> helpPageForScreen(AppScreen.Settings)
@@ -2190,11 +2506,11 @@ private fun helpTopics(screen: AppScreen): List<HelpTopic> {
         AppScreen.Dashboard -> listOf(
             HelpTopic(
                 "Stato protezione",
-                "La schermata Protezione mostra se Android ha assegnato a FreyaShield il ruolo di filtro chiamate. Senza questo ruolo l'app puo salvare regole e configurazioni, ma non puo intervenire sulle chiamate in arrivo."
+                "La schermata Protezione mostra se Android ha assegnato a FreyaShield il ruolo di filtro chiamate. Senza questo ruolo l'app può salvare regole e configurazioni, ma non può intervenire sulle chiamate in arrivo."
             ),
             HelpTopic(
-                "Analisi core",
-                "Il riquadro Analisi core esegue una prova locale del motore C++. Serve a verificare che JNI, policy, whitelist e blocklist siano caricate correttamente. Score indica il rischio da 0 a 1; Azione indica Consenti, Avvisa, Silenzia o Blocca."
+                "Verifica motore",
+                "Il riquadro Verifica motore controlla il motore C++ in locale. Serve a verificare che JNI, policy, whitelist e blocklist siano caricate correttamente. Score indica il rischio da 0 a 1; Azione indica Consenti, Avvisa, Silenzia o Blocca."
             ),
             HelpTopic(
                 "Statistiche e registro recente",
@@ -2227,7 +2543,7 @@ private fun helpTopics(screen: AppScreen): List<HelpTopic> {
 
         AppScreen.Settings -> listOf(
             HelpTopic(
-                "Modalita protezione",
+                "Modalità protezione",
                 "Bassa riduce i falsi positivi, Standard mantiene equilibrio, Alta aumenta la severita, Call center attiva una configurazione piu rigorosa contro numeri ripetuti, prefissi simili, chiamate non verificate e chiamate serali sospette."
             ),
             HelpTopic(
@@ -2236,7 +2552,7 @@ private fun helpTopics(screen: AppScreen): List<HelpTopic> {
             ),
             HelpTopic(
                 "Controllo ID chiamata",
-                "Quando Android fornisce la verifica chiamante, FreyaShield la usa come segnale. Verifica superata riduce il rischio; verifica fallita e uno dei segnali piu forti e puo causare blocco immediato."
+                "Quando Android fornisce la verifica chiamante, FreyaShield la usa come segnale. Verifica superata riduce il rischio; verifica fallita è uno dei segnali più forti e può causare blocco immediato."
             ),
             HelpTopic(
                 "Neighbor spoofing",
@@ -2244,7 +2560,7 @@ private fun helpTopics(screen: AppScreen): List<HelpTopic> {
             ),
             HelpTopic(
                 "Auto-blocco simili",
-                "Conta localmente chiamate ravvicinate dallo stesso numero o dallo stesso prefisso usando hash, non numeri completi. Se un gruppo di numeri diventa insistente, puo essere bloccato automaticamente."
+                "Conta localmente chiamate ravvicinate dallo stesso numero o dallo stesso prefisso usando hash, non numeri completi. Se un gruppo di numeri diventa insistente, può essere bloccato automaticamente."
             ),
             HelpTopic(
                 "Quarantena temporanea",
@@ -2252,7 +2568,7 @@ private fun helpTopics(screen: AppScreen): List<HelpTopic> {
             ),
             HelpTopic(
                 "Sospetti non verificati",
-                "Blocca chiamate che non hanno verifica positiva e che hanno gia altri segnali di rischio. E utile contro call center e spoofing, ma puo essere severa con numeri legittimi non verificati dall'operatore."
+                "Blocca chiamate che non hanno verifica positiva e che hanno già altri segnali di rischio. È utile contro call center e spoofing, ma può essere severa con numeri legittimi non verificati dall'operatore."
             ),
             HelpTopic(
                 "Filtro sera e notte",
@@ -2260,7 +2576,7 @@ private fun helpTopics(screen: AppScreen): List<HelpTopic> {
             ),
             HelpTopic(
                 "Solo regole fidate",
-                "Modalita restrittiva: lascia passare solo whitelist e pattern fidati. E pensata per periodi con molte chiamate indesiderate, non come uso quotidiano se ricevi spesso chiamate nuove ma legittime."
+                "Modalità restrittiva: lascia passare solo whitelist e pattern fidati. È pensata per periodi con molte chiamate indesiderate, non come uso quotidiano se ricevi spesso chiamate nuove ma legittime."
             ),
             HelpTopic(
                 "Diagnostica e cancellazione",
@@ -2305,15 +2621,15 @@ private fun helpTopics(screen: AppScreen): List<HelpTopic> {
         AppScreen.Test -> listOf(
             HelpTopic(
                 "Simulatore chiamata",
-                "Inserisci un numero e scegli se simularlo come gia visto, con verifica fallita o ad alta frequenza. L'analisi usa lo stesso motore della chiamata reale, senza salvare la prova come evento telefonico."
+                "Inserisci un numero e scegli se simularlo come già visto, con verifica fallita o ad alta frequenza. L'analisi usa lo stesso motore della chiamata reale, senza salvare la simulazione come evento telefonico."
             ),
             HelpTopic(
                 "Scenari rapidi",
                 "Gli scenari predefiniti mostrano casi tipici: chiamata normale, verifica fallita, neighbor spoofing, alta frequenza, whitelist, pattern artificiale e spam estero."
             ),
             HelpTopic(
-                "Creare regole dalla prova",
-                "Dopo un test puoi fidarti del numero o bloccare numeri simili. E un modo rapido per verificare una configurazione prima di usarla su chiamate reali."
+                "Creare regole dalla simulazione",
+                "Dopo una simulazione puoi fidarti del numero o bloccare numeri simili. È un modo rapido per verificare una configurazione prima di usarla su chiamate reali."
             )
         )
 
@@ -2616,7 +2932,7 @@ private fun testScenarios(): List<TestScenario> {
     return listOf(
         TestScenario(
             title = "Chiamata normale",
-            description = "Numero italiano gia visto e senza segnali sospetti.",
+            description = "Numero italiano già visto e senza segnali sospetti.",
             callInfo = PlatformCallInfo(
                 rawPhoneNumber = "+393331234567",
                 timestampMillis = now,
@@ -2734,6 +3050,7 @@ private fun saveAndApplyPolicy(
     warnThreshold: Float,
     silenceThreshold: Float,
     blockThreshold: Float,
+    consentLevel: Int,
     blockFailedVerification: Boolean,
     warnNeighborSpoof: Boolean,
     blockFirstSeenInternational: Boolean,
@@ -2750,6 +3067,7 @@ private fun saveAndApplyPolicy(
             warnThreshold = warnThreshold,
             silenceThreshold = silenceThreshold,
             blockThreshold = blockThreshold,
+            consentLevel = consentLevel,
             blockFailedVerification = blockFailedVerification,
             warnNeighborSpoof = warnNeighborSpoof,
             blockFirstSeenInternational = blockFirstSeenInternational,
@@ -2934,6 +3252,10 @@ private fun reasonLabel(reason: String): String {
         "UNVERIFIED_SUSPICIOUS" -> "Sospetto non verificato"
         "QUIET_HOURS_FILTER" -> "Filtro sera e notte"
         "EMPTY_CALL_INFO" -> "Dati chiamata vuoti"
+        "CONSENT_REQUIRED" -> "Richiede consenso"
+        "CONSENT_LEVEL_0" -> "Limitato dal consenso: solo registro"
+        "CONSENT_LEVEL_1" -> "Limitato dal consenso: avviso"
+        "CONSENT_LEVEL_2" -> "Limitato dal consenso: silenzia"
         else -> reason
     }
     return localizeText(source)

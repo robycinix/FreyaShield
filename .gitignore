@@ -2,6 +2,8 @@
 .tools/
 core_engine/build/
 android/.gradle/
+android/.kotlin/
+android/app/.cxx/
 android/build/
 android/app/build/
 android/local.properties

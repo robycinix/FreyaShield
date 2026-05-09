@@ -20,7 +20,7 @@ data class CallEvent(
 object CallEventStore {
     private const val PREFS_NAME = "callguardian_masked_events"
     private const val KEY_EVENTS = "events"
-    private const val MAX_EVENTS = 50
+    private const val MAX_EVENTS = 5
     private const val RETENTION_DAYS = 30L
 
     fun record(context: Context, rawPhoneNumber: String, assessment: PlatformRiskAssessment) {
@@ -43,11 +43,11 @@ object CallEventStore {
         prefs(context).edit().putString(KEY_EVENTS, updated.toString()).apply()
     }
 
-    fun loadRecent(context: Context, limit: Int = 8): List<CallEvent> {
+    fun loadRecent(context: Context, limit: Int = MAX_EVENTS): List<CallEvent> {
         val events = prune(JSONArray(prefs(context).getString(KEY_EVENTS, "[]") ?: "[]"))
         prefs(context).edit().putString(KEY_EVENTS, events.toString()).apply()
         val out = mutableListOf<CallEvent>()
-        val count = minOf(events.length(), limit)
+        val count = minOf(events.length(), limit, MAX_EVENTS)
         for (index in 0 until count) {
             val obj = events.optJSONObject(index) ?: continue
             out.add(

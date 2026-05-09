@@ -1,4 +1,0 @@
-C:/Users/rober/Documents/New project/android/app/.cxx/Debug/732945v2/armeabi-v7a/CMakeFiles/callguardian_core.dir
-C:/Users/rober/Documents/New project/android/app/.cxx/Debug/732945v2/armeabi-v7a/CMakeFiles/callguardian_jni.dir
-C:/Users/rober/Documents/New project/android/app/.cxx/Debug/732945v2/armeabi-v7a/CMakeFiles/edit_cache.dir
-C:/Users/rober/Documents/New project/android/app/.cxx/Debug/732945v2/armeabi-v7a/CMakeFiles/rebuild_cache.dir

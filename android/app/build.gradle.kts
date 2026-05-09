@@ -43,6 +43,11 @@ android {
             useLegacyPackaging = false
         }
     }
+
+    lint {
+        disable += "GradleDependency"
+        disable += "ObsoleteSdkInt"
+    }
 }
 
 kotlin {

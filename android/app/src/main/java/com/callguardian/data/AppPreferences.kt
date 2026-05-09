@@ -9,6 +9,7 @@ data class PolicySettings(
     val warnThreshold: Float = 0.35f,
     val silenceThreshold: Float = 0.50f,
     val blockThreshold: Float = 0.65f,
+    val consentLevel: Int = 1,
     val blockFailedVerification: Boolean = true,
     val warnNeighborSpoof: Boolean = true,
     val blockHighFrequencyRobocall: Boolean = true,
@@ -37,6 +38,7 @@ object AppPreferences {
                 warnThreshold = obj.optDouble("warnThreshold", 0.35).toFloat(),
                 silenceThreshold = obj.optDouble("silenceThreshold", 0.50).toFloat(),
                 blockThreshold = obj.optDouble("blockThreshold", 0.65).toFloat(),
+                consentLevel = obj.optInt("consentLevel", 1),
                 blockFailedVerification = obj.optBoolean("blockFailedVerification", true),
                 warnNeighborSpoof = obj.optBoolean("warnNeighborSpoof", true),
                 blockHighFrequencyRobocall = obj.optBoolean("blockHighFrequencyRobocall", true),
@@ -141,7 +143,8 @@ object AppPreferences {
         return copy(
             warnThreshold = warn,
             silenceThreshold = silence,
-            blockThreshold = block
+            blockThreshold = block,
+            consentLevel = consentLevel.coerceIn(0, 3)
         )
     }
 
@@ -150,6 +153,7 @@ object AppPreferences {
             .put("warnThreshold", warnThreshold.toDouble())
             .put("silenceThreshold", silenceThreshold.toDouble())
             .put("blockThreshold", blockThreshold.toDouble())
+            .put("consentLevel", consentLevel)
             .put("blockFailedVerification", blockFailedVerification)
             .put("warnNeighborSpoof", warnNeighborSpoof)
             .put("blockHighFrequencyRobocall", blockHighFrequencyRobocall)

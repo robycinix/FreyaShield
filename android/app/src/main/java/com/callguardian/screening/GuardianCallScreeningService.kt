@@ -54,7 +54,7 @@ class GuardianCallScreeningService : CallScreeningService() {
                 isWhitelisted = isWhitelisted,
                 greylistedPrefix = patternSignal.greylistedPrefix,
                 recentCallsFromSamePrefix = patternSignal.recentCallsFromSamePrefix
-            )
+            ).limitedByConsent(policy)
             CallStatsStore.recordAssessment(this, finalAssessment)
             CallEventStore.record(this, number, finalAssessment)
             CallPatternStore.record(this, number, finalAssessment, policy)
@@ -74,6 +74,10 @@ class GuardianCallScreeningService : CallScreeningService() {
                     .build()
 
                 else -> allowResponse()
+            }
+
+            if (policy.manualFeedbackActions && finalAssessment.action <= ACTION_WARN) {
+                CallChoiceNotifier.show(this, number, finalAssessment)
             }
 
             respondToCall(details, response)
@@ -172,8 +176,24 @@ class GuardianCallScreeningService : CallScreeningService() {
             )
         }
 
+        fun PlatformRiskAssessment.limitedByConsent(policy: PolicySettings): PlatformRiskAssessment {
+            val maxAction = policy.consentLevel.coerceIn(ACTION_ALLOW, ACTION_BLOCK)
+            if (action <= maxAction) {
+                return this
+            }
+
+            val reason = "CONSENT_LEVEL_$maxAction"
+            return copy(
+                action = maxAction,
+                primaryReason = if (maxAction == ACTION_ALLOW) "CONSENT_REQUIRED" else primaryReason,
+                explanation = appendExplanation(explanation, reason)
+            )
+        }
+
         fun appendExplanation(existing: String, reason: String): String {
             return if (existing.isBlank()) reason else "$existing; $reason"
         }
+
+        const val ACTION_ALLOW = 0
     }
 }
